@@ -1,7 +1,7 @@
 import logging
 from playwright.sync_api import sync_playwright
-from auth_utils import login_to_portal, get_worklist_urls
-from db_utils import insert_sam_urls
+from common.auth_utils import login_to_portal, get_worklist_urls
+from common.db_utils import insert_sam_urls
 
 # Basic logging setup
 logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')

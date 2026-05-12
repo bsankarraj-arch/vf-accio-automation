@@ -7,12 +7,12 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # 2. Point to the folder where your CODE actually lives (.venv)
 # Note: Changing this from .venv to .venv
-performer_path = os.path.join(BASE_DIR, ".venv", "perfomer.py")
+performer_path = os.path.join(BASE_DIR, "common", "perfomer.py")
 
 if not os.path.exists(performer_path):
     print(f"❌ Still can't find it at: {performer_path}")
     # Let's see what is actually inside that .venv folder
-    env_folder = os.path.join(BASE_DIR, ".venv")
+    env_folder = os.path.join(BASE_DIR, "common")
     if os.path.exists(env_folder):
         print(f"Contents of .venv folder: {os.listdir(env_folder)}")
     sys.exit(1)
@@ -22,7 +22,7 @@ spec = importlib.util.spec_from_file_location("performer", performer_path)
 sam_mod = importlib.util.module_from_spec(spec)
 
 # Add .venv to path so it can find auth_utils.py, etc.
-sys.path.append(os.path.join(BASE_DIR, ".venv"))
+sys.path.append(os.path.join(BASE_DIR, "common"))
 
 spec.loader.exec_module(sam_mod)
 
