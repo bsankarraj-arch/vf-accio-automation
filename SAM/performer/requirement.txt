@@ -1,0 +1,17 @@
+# Web Automation
+playwright
+
+# Database & Data Processing
+psycopg2-binary
+pandas
+
+# Cloud Services (AWS)
+boto3
+botocore
+
+# Utilities
+pyperclip
+python-dotenv
+
+# Standard Libraries (No install needed): logging, tkinter, platform, re, time, os, json
+# Local Modules (Your own files): auth_utils, db_utils, email_utils, aws_2. These must be kept in the same folder as your script.

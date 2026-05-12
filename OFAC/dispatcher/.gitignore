@@ -1,0 +1,14 @@
+# Ignore the environment folders
+.venv/
+.env/
+
+# Ignore python cache
+__pycache__/
+*.pyc
+
+# Ignore local data/logs
+logs/
+screenshots/
+data/
+
+# Do NOT ignore .gitignore or main.py (make sure there's no '*' at the top)
