@@ -4,6 +4,24 @@ import time
 import logging
 from common.aws_2 import get_secret
 
+prod_flag = False
+# prod_url's
+base_url = "https://verifiedfirst.bgsecured.com/"
+prod_login_url = "https://verifiedfirst.bgsecured.com/"
+prod_sam_url = "https://verifiedfirst.bgsecured.com/c/s2/worklist?report_name_selector=s%3ASAM%20Automation%20Report"
+# dev_url's
+base_url = "https://vfbeta.bgsecured.com/"
+dev_login_url = "https://vfbeta.bgsecured.com/sysops/sysop_home9.html"
+dev_sam_url = "https://vfbeta.bgsecured.com/c/s2/worklist?dynamic_report_name=s:SAM%20Automation%20Report"
+
+
+if prod_flag:
+    login_url = prod_login_url
+    sam_url = prod_sam_url
+else:
+    login_url = dev_login_url
+    sam_url = dev_sam_url
+
 def login_to_portal(page, max_retries=3):
     """Handles authentication to the portal."""
     try:
@@ -17,7 +35,7 @@ def login_to_portal(page, max_retries=3):
         try:
             logging.info(f"🌐 Login Attempt {attempt}/{max_retries}...")           
             
-            page.goto("https://vfbeta.bgsecured.com/sysops/sysop_home9.html", 
+            page.goto(login_url, 
                       wait_until="domcontentloaded", timeout=60000)
             
             page.get_by_role("textbox", name="account").fill(acc, timeout=10000)
@@ -52,8 +70,8 @@ def login_to_portal(page, max_retries=3):
 
 def get_worklist_urls(page):
     """Navigates to the SAM worklist and extracts all task URLs."""
-    target_url = "https://vfbeta.bgsecured.com/c/s2/worklist?report_name_selector=s%3ASAM%20Automation%20Report"
-    base_url = "https://vfbeta.bgsecured.com"
+    target_url = sam_url
+    # base_url = "https://vfbeta.bgsecured.com"
     
     try:
         logging.info(f"🚀 Navigating to Worklist: {target_url}")
@@ -80,7 +98,7 @@ def get_worklist_urls(page):
                 url = link_locator.get_attribute("href")
                 # Ensure it's an absolute URL if the portal uses relative paths
                 if url.startswith('/'):
-                    url = f"https://vfbeta.bgsecured.com{url}"
+                    url = f"{base_url}{url}"
                 
                 urls.append(url)
         

@@ -2,7 +2,18 @@
 import os
 import time
 import logging
-from aws_2 import get_secret
+from common.aws_2 import get_secret
+
+prod_flag = False
+# prod_url's
+prod_login_url = "https://verifiedfirst.bgsecured.com/"
+# dev_url's
+dev_login_url = "https://vfbeta.bgsecured.com/sysops/sysop_home9.html"
+
+if prod_flag:
+    login_url = prod_login_url
+else:    
+    login_url = dev_login_url
 
 def login_to_portal(page, max_retries=3):
 
@@ -18,7 +29,7 @@ def login_to_portal(page, max_retries=3):
         try:
             logging.info(f"🌐 Login Attempt {attempt}/{max_retries}...")           
             
-            page.goto("https://vfbeta.bgsecured.com/sysops/sysop_home9.html", 
+            page.goto(login_url, 
                       wait_until="domcontentloaded", timeout=60000)
             page.get_by_role("textbox", name="account").fill(acc, timeout=10000)
             page.locator("input[name='userid']").fill(uid)
