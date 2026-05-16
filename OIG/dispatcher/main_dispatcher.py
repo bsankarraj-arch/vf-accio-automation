@@ -1,7 +1,7 @@
 import logging
 from playwright.sync_api import sync_playwright
 from common.auth_utils import login_to_portal, get_worklist_urls
-from common.db_utils import insert_oig_urls
+from common.db_utils import insert_oig_urls, update_oig_inprogress
 
 # Basic logging setup
 logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
@@ -15,6 +15,7 @@ def main():
         try:
             # Step 1: Login via auth_utils
             if login_to_portal(page):
+                update_oig_inprogress()
                 
                 # Step 2: Extract URLs from the OIG worklist
                 task_urls = get_worklist_urls(page)

@@ -4,7 +4,7 @@ import time
 import logging
 from common.aws_2 import get_secret
 
-prod_flag = False
+prod_flag = os.getenv("ENVIRONMENT", "dev").lower() == "prod"
 # prod_url's
 base_url = "https://verifiedfirst.bgsecured.com/"
 prod_login_url = "https://verifiedfirst.bgsecured.com/"
@@ -67,6 +67,9 @@ def login_to_portal(page, max_retries=3):
                 raise e 
             
             time.sleep(5)
+
+
+
 
 def get_worklist_urls(page):
     """Navigates to the SAM worklist and extracts all task URLs."""

@@ -5,7 +5,7 @@ import logging
 from common.aws_2 import get_secret
 
 
-prod_flag = False
+prod_flag = os.getenv("ENVIRONMENT", "dev").lower() == "prod"
 # prod_url's
 prod_login_url = "https://verifiedfirst.bgsecured.com/"
 # dev_url's

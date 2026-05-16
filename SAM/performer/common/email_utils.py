@@ -56,7 +56,7 @@ def send_failure_email(error_details="No specific error details provided."):
         email_content = f"""
 Dear Administrator,
 
-The OIG Automation Bot has encountered an error during execution.
+The SAM Automation Bot has encountered an error during execution.
 
 --- ERROR DETAILS ---
 {error_details}
@@ -68,9 +68,9 @@ This is an automated message.
         """
         
         message.set_content(email_content)
-        message['To'] = 'balamurugansankarraj@gmail.com'
-        message['From'] = 'bsankarraj@verifiedfirst.com'
-        message['Subject'] = '⚠️ ALERT: OIG Bot Execution Failed'
+        message['To'] = os.getenv("ALERT_EMAIL_TO", "mmohamed@verifiedfirst.com")
+        message['From'] = os.getenv("ALERT_EMAIL_FROM", "vfaccioautomation@verifiedfirst.com")
+        message['Subject'] = '⚠️ ALERT: SAM Bot Execution Failed'
 
         # Encode the message
         encoded_message = base64.urlsafe_b64encode(message.as_bytes()).decode()

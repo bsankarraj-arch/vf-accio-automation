@@ -4,22 +4,59 @@ import os
 import logging
 from psycopg2.extras import execute_batch
 from dotenv import load_dotenv
+import time
 
 load_dotenv()
 
-def get_db_connection():
-    """Establishes connection to the PostgreSQL database."""
+def get_db_connection(max_retries=3):
+    last_exception = None
+    for attempt in range(1, max_retries + 1):
+        try:
+            return psycopg2.connect(
+                host=os.getenv("DB_HOST"),
+                database=os.getenv("DB_NAME"),
+                user=os.getenv("DB_USER"),
+                password=os.getenv("DB_PASS"),
+                port=os.getenv("DB_PORT")
+            )
+        except Exception as e:
+            last_exception = e
+            logging.warning(f"DB connection attempt {attempt}/{max_retries} failed: {e}")
+            if attempt < max_retries:
+                time.sleep(2 ** attempt)
+    logging.error("All DB connection attempts failed.")
+    raise last_exception
+
+
+def update_ofac_inprogress():
+    """
+    Checks for stuck 'inprogress' jobs older than 1 hour 
+    and resets them to 'new' before scraping starts.
+    """
+    conn = get_db_connection()
+    if conn is None: 
+        return
+
     try:
-        return psycopg2.connect(
-            host=os.getenv("DB_HOST"),
-            database=os.getenv("DB_NAME"),
-            user=os.getenv("DB_USER"),
-            password=os.getenv("DB_PASS"),
-            port=os.getenv("DB_PORT")
-        )
+        cur = conn.cursor()
+        
+        # Wrapped the SQL string and added execution block
+        query = """
+            UPDATE "SAM_Operations"
+            SET status = 'new', modified_datetime = NOW()
+            WHERE status = 'inprogress'
+              AND modified_datetime < NOW() - INTERVAL '1 hour';
+        """
+        
+        cur.execute(query)
+        conn.commit()
+        logging.info(f"🔄 Checked and reset stuck 'inprogress' jobs to 'new' (Rows affected: {cur.rowcount}).")
+        
     except Exception as e:
-        logging.error(f"❌ Database connection error: {e}")
-        return None
+        logging.error(f"❌ Error updating inprogress statuses: {e}")
+        conn.rollback()
+    finally:
+        conn.close()
 
 def insert_ofac_urls(url_list, table_name="OFAC_Operations"):
     """
@@ -40,19 +77,14 @@ def insert_ofac_urls(url_list, table_name="OFAC_Operations"):
         url_list.reverse()
         
         # 1. Get current max ID for manual incrementing
-        cur.execute(f'SELECT COALESCE(MAX(id), 0) FROM "{table_name}"')
-        current_max_id = cur.fetchone()[0]
-        
-        # 2. Prepare data for batch insert
-        data_to_insert = []
-        for i, url in enumerate(url_list, start=1):
-            new_id = current_max_id + i
-            data_to_insert.append((new_id, url, "new"))
+        data_to_insert = [(url, "new") for url in url_list]
 
         # 3. Perform Batch Insert
         query = f'''
-            INSERT INTO "{table_name}" (id, url, status, created_datetime) 
-            VALUES (%s, %s, %s, NOW())
+            INSERT INTO "{table_name}" (url, status, created_datetime)
+            VALUES (%s, %s, NOW())
+            ON CONFLICT (url) DO NOTHING
+
         '''
         
         execute_batch(cur, query, data_to_insert)

@@ -57,7 +57,12 @@ def get_new_urls_and_mark_inprogress(table_name):
             )
             RETURNING url;
         '''
-        df = pd.read_sql(query, conn)
+        cur = conn.cursor()
+        cur.execute(query)
+        rows = cur.fetchall()
+        columns = [desc[0] for desc in cur.description]
+        df = pd.DataFrame(rows, columns=columns)
+        conn.commit()
         return df
     except Exception as e:
         logging.error(f"❌ Error fetching/locking URLs in {table_name}: {e}")

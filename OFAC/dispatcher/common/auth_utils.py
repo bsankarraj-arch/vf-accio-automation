@@ -4,8 +4,7 @@ import time
 import logging
 from common.aws_2 import get_secret
 
-
-prod_flag = False
+prod_flag = os.getenv("ENVIRONMENT", "dev").lower() == "prod"
 # prod_url's
 base_url = "https://verifiedfirst.bgsecured.com/"
 prod_login_url = "https://verifiedfirst.bgsecured.com/"

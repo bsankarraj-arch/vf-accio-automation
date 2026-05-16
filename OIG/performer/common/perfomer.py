@@ -8,6 +8,9 @@ from playwright.sync_api import sync_playwright
 from common.auth_utils import login_to_portal
 from common.db_utils import get_new_urls_and_mark_inprogress, update_url_status
 from common.email_utils import send_failure_email  # Updated import to match OFAC 
+from common.db_utils import get_execution_flags
+
+flags = get_execution_flags()
 
 
 oig_search_url = "https://exclusions.oig.hhs.gov/"
@@ -27,8 +30,8 @@ logging.basicConfig(
 class OIGPerformer:
     def __init__(self):
         self.table_name = "OIG_Operations"
-        self.root = tk.Tk()
-        self.root.withdraw()
+        # self.root = tk.Tk()
+        # self.root.withdraw()
         self.max_retries = 3
 
     def retry_action(self, action_callable, action_name="Action", *args, **kwargs):
@@ -137,12 +140,16 @@ class OIGPerformer:
         except Exception as e:
             error_msg = f"OIG Transaction failed for {target_url}. Error: {str(e)}"
             logging.error(f"❌ {error_msg}")
-            update_url_status(target_url, "Error", self.table_name)
+            update_url_status(target_url, "error", self.table_name)
             send_failure_email(error_msg) 
         finally:
             work_page.close()
 
     def run(self):
+        process_key = "oig"
+        if not flags.get(process_key, True):
+            logging.info(f"🛑 Kill switch active for {process_key.upper()}. Exiting.")
+            return
         with sync_playwright() as p:
             browser = None
             try:

@@ -4,22 +4,29 @@ import pandas as pd
 from psycopg2.extras import execute_values
 from dotenv import load_dotenv
 import logging
+import time
 
 load_dotenv()
 
-def get_db_connection():
-    try:
-        return psycopg2.connect(
-            host=os.getenv("DB_HOST"),
-            database=os.getenv("DB_NAME"),
-            user=os.getenv("DB_USER"),
-            password=os.getenv("DB_PASS"),
-            port=os.getenv("DB_PORT")
-        )
-    except Exception as e:
-        logging.error(f"❌ Database connection error: {e}")
-        return None
-    
+
+def get_db_connection(max_retries=3):
+    last_exception = None
+    for attempt in range(1, max_retries + 1):
+        try:
+            return psycopg2.connect(
+                host=os.getenv("DB_HOST"),
+                database=os.getenv("DB_NAME"),
+                user=os.getenv("DB_USER"),
+                password=os.getenv("DB_PASS"),
+                port=os.getenv("DB_PORT")
+            )
+        except Exception as e:
+            last_exception = e
+            logging.warning(f"DB connection attempt {attempt}/{max_retries} failed: {e}")
+            if attempt < max_retries:
+                time.sleep(2 ** attempt)
+    logging.error("All DB connection attempts failed.")
+    raise last_exception
 
 def get_execution_flags():
     """Reads the control flags from the public schema."""
@@ -57,7 +64,14 @@ def get_new_urls_and_mark_inprogress(table_name):
             )
             RETURNING url;
         '''
-        df = pd.read_sql(query, conn)
+        # df = pd.read_sql(query, conn)
+        # return df
+        cur = conn.cursor()
+        cur.execute(query)
+        rows = cur.fetchall()
+        columns = [desc[0] for desc in cur.description]
+        df = pd.DataFrame(rows, columns=columns)
+        conn.commit()
         return df
     except Exception as e:
         logging.error(f"❌ Error fetching/locking URLs in {table_name}: {e}")
@@ -97,19 +111,23 @@ def insert_urls_to_table(df, table_name):
         df = df.iloc[::-1].reset_index(drop=True)
         
         # 1. Get current max ID
-        cur.execute(f'SELECT COALESCE(MAX(id), 0) FROM "{table_name}"')
-        current_max_id = cur.fetchone()[0]
+        # cur.execute(f'SELECT COALESCE(MAX(id), 0) FROM "{table_name}"')
+        # current_max_id = cur.fetchone()[0]
         
-        data_to_insert = []
-        for i, row in enumerate(df.itertuples(index=False), start=1):
-            new_id = current_max_id + i
-            # Format: (id, url, status)
-            data_to_insert.append((new_id, row.url, "new"))
+        # data_to_insert = []
+        # for i, row in enumerate(df.itertuples(index=False), start=1):
+        #     new_id = current_max_id + i
+        #     # Format: (id, url, status)
+        #     data_to_insert.append((new_id, row.url, "new"))
+
+        data_to_insert = [(url, "new") for url in df.itertuples(index=False)]
 
         # 3. Batch Insert
         query = f'''
-            INSERT INTO "{table_name}" (id, url, status, created_datetime) 
-            VALUES (%s, %s, %s, NOW())
+                INSERT INTO "{table_name}" (url, status, created_datetime)
+                VALUES (%s, %s, NOW())
+                ON CONFLICT (url) DO NOTHING
+
         '''
         
         from psycopg2.extras import execute_batch

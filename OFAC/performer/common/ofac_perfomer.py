@@ -8,6 +8,9 @@ from playwright.sync_api import sync_playwright
 from common.auth_utils import login_to_portal
 from common.db_utils import get_new_urls_and_mark_inprogress, update_url_status
 from common.email_utils import send_failure_email # Ensure filename matches yours
+from common.db_utils import get_execution_flags
+
+flags = get_execution_flags()
 
 # --- 1. GLOBAL CONFIGURATION ---
 OFAC_SEARCH_URL = "https://sanctionssearch.ofac.treas.gov/"
@@ -27,8 +30,8 @@ logging.basicConfig(
 class OFACPerformer:
     def __init__(self):
         self.table_name = "OFAC_Operations"
-        self.root = tk.Tk()
-        self.root.withdraw()
+        # self.root = tk.Tk()
+        # self.root.withdraw()
         self.max_retries = 3
 
     def retry_action(self, action_callable, action_name="Action", *args, **kwargs):
@@ -108,6 +111,10 @@ class OFACPerformer:
                 disposition.select_option("hits")
 
             work_page.locator('input[name="status"][value="complete"]').check()
+            submit_btn = work_page.locator('input.fillorder-submitter[value="submit"]')
+            submit_btn.wait_for(state="visible", timeout=5000)
+            submit_btn.click()
+
             return True
 
         try:
@@ -128,7 +135,7 @@ class OFACPerformer:
         except Exception as e:
             error_msg = f"Transaction failed for {target_url}. Error: {str(e)}"
             logging.error(f"❌ {error_msg}")
-            update_url_status(target_url, "Error", self.table_name)
+            update_url_status(target_url, "error", self.table_name)
             
             # Send email for individual transaction failures
             send_failure_email(error_msg) 
@@ -136,6 +143,11 @@ class OFACPerformer:
             work_page.close()
 
     def run(self):
+        process_key = "ofac"
+        if not flags.get(process_key, True):
+            logging.info(f"🛑 Kill switch active for {process_key.upper()}. Exiting.")
+            return
+        
         with sync_playwright() as p:
             try:
                 browser = p.chromium.launch(headless=True, args=["--no-sandbox", "--disable-dev-shm-usage"])
