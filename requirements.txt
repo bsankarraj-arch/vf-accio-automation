@@ -1,0 +1,9 @@
+playwright>=1.59
+psycopg2-binary>=2.9
+pandas>=2.0
+boto3
+botocore
+pyperclip
+python-dotenv
+google-auth-oauthlib
+google-api-python-client
